@@ -44,7 +44,7 @@ func sendRequest(id int, interval com.TPInterval, encoder *gob.Encoder, addChan 
 // pueda calcular, para cada petición, cuál es el tiempo total desde que se envía hasta que se recibe.
 // Las peticiones le llegan a la goroutine a través del canal addChan. Por el canal delChan se
 // indica que ha llegado una respuesta de una petición. En la respuesta, se obtiene también el timestamp de la recepción.
-// Antes de eliminar una petición se imprime por la salida estándar el id de una petición y el tiempo transcurrido, observado
+// Antes de eliminar una petición se imprime por la salida estándar y por el file argumento el id de una petición y el tiempo transcurrido, observado
 // por el cliente (tiempo de transmisión + tiempo de overheads + tiempo de ejecución efectivo)
 func handleRequests(addChan chan com.TimeRequest, delChan chan com.TimeReply, outFile *os.File) {
     requests := make(map[int]time.Time)
