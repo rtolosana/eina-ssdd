@@ -12,7 +12,7 @@ import (
     "fmt"
     "time"
     "encoding/gob"
-    "prac1/com"
+    "./com"
     "os"
     "net"
 )
