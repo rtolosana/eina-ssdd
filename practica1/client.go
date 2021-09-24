@@ -12,7 +12,7 @@ import (
     "fmt"
     "time"
     "encoding/gob"
-    "./com"
+    "prac1/com"
     "os"
     "net"
 )
@@ -46,14 +46,17 @@ func sendRequest(id int, interval com.TPInterval, encoder *gob.Encoder, addChan 
 // indica que ha llegado una respuesta de una petición. En la respuesta, se obtiene también el timestamp de la recepción.
 // Antes de eliminar una petición se imprime por la salida estándar el id de una petición y el tiempo transcurrido, observado
 // por el cliente (tiempo de transmisión + tiempo de overheads + tiempo de ejecución efectivo)
-func handleRequests(addChan chan com.TimeRequest, delChan chan com.TimeReply) {
+func handleRequests(addChan chan com.TimeRequest, delChan chan com.TimeReply, outFile *os.File) {
     requests := make(map[int]time.Time)
     for {
         select {
             case request := <- addChan:
                 requests[request.Id] = request.T
             case reply := <- delChan:
-                fmt.Println(reply.Id, " ", reply.T.Sub(requests[reply.Id]))
+                var elapsedT = reply.T.Sub(requests[reply.Id])
+                fmt.Println(reply.Id, " ", elapsedT)
+                fmt.Fprintln(outFile, printedRequests, " ", elapsedT)
+                printedRequests++
                 delete(requests, reply.Id)
         }
     }
@@ -71,9 +74,11 @@ func receiveReply(decoder *gob.Decoder, delChan chan com.TimeReply){
         err := decoder.Decode(&reply)
         checkError(err)
         timeReply := com.TimeReply{reply.Id, time.Now()}
-        delChan <- timeReply 
+        delChan <- timeReply
     }
 }
+
+var printedRequests = 0
 
 func main(){
     endpoint := "127.0.0.1:30000"
@@ -81,7 +86,14 @@ func main(){
     requestTmp := 6
     interval := com.TPInterval{1000, 70000}
     tts := 3000 // time to sleep between consecutive requests
-    
+    outFile, err := os.Create("output.txt")
+    defer outFile.Close()
+
+    if err != nil {
+		fmt.Println("os.Create:", err)
+		os.Exit(1)
+	}
+
     tcpAddr, err := net.ResolveTCPAddr("tcp", endpoint)
     checkError(err)
 
@@ -95,12 +107,14 @@ func main(){
     delChan := make(chan com.TimeReply)
 
     go receiveReply(decoder, delChan)
-    go handleRequests(addChan, delChan)
+    go handleRequests(addChan, delChan, outFile)
     
     for i := 0; i < numIt; i++ {
         for t := 1; t <= requestTmp; t++{
             sendRequest(i * requestTmp + t, interval, encoder, addChan)
+            fmt.Println("Sending request", t+i*6)
         }
         time.Sleep(time.Duration(tts) * time.Millisecond)
     }
 }
+
