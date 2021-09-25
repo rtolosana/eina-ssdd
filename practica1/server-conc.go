@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"net"
 	"os"
-	"io"
-	"./com"
+	//"io"
+	"prac1/com"
 )
 
 func checkError(err error) {
@@ -47,15 +47,33 @@ func FindPrimes(interval com.TPInterval) (primes []int) {
 	return primes
 }
 
+func AnswerRequest (encoder *gob.Encoder, req com.Request) () {
+	var reply com.Reply
+	reply.Id = req.Id
+	reply.Primes = FindPrimes(req.Interval)
+	encoder.Encode(reply)
+}
+
 func main() {
 
-	listener, err := net.Listen(CONN_TYPE, CONN_HOST+":"+CONN_PORT)
+	fmt.Println("hello!\n")
+	
+	listener, err := net.Listen("tcp", "127.0.0.1:30000")
 	checkError(err)
 
 	conn, err := listener.Accept()
 	defer conn.Close()
 	checkError(err)
-
-    // TO DO
+	fmt.Println("Starting encoders\n")
+	encoder := gob.NewEncoder(conn)
+    decoder := gob.NewDecoder(conn)
+	var req com.Request
+	fmt.Println("Server on\n")
+	for
+	{
+		err := decoder.Decode(&req)
+		checkError(err)
+		go AnswerRequest(encoder, req)
+	}
 }
 
