@@ -6,7 +6,7 @@
 * FICHERO: server.go
 * DESCRIPCIÓN: contiene la funcionalidad esencial para realizar los servidores
 *				correspondientes a la práctica 1
-*/
+ */
 package main
 
 import (
@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+
 	//"io"
 	"prac1/com"
 )
@@ -29,7 +30,10 @@ func checkError(err error) {
 // POST: IsPrime devuelve verdad si n es primo y falso en caso contrario
 func IsPrime(n int) (foundDivisor bool) {
 	foundDivisor = false
-	for i := 2; (i < n) && !foundDivisor; i++ {
+	if n%2 == 0 {
+		return true
+	}
+	for i := 3; (i < n) && !foundDivisor; i += 2 {
 		foundDivisor = (n%i == 0)
 	}
 	return !foundDivisor
@@ -47,7 +51,7 @@ func FindPrimes(interval com.TPInterval) (primes []int) {
 	return primes
 }
 
-func AnswerRequest (encoder *gob.Encoder, req com.Request) () {
+func AnswerRequest(encoder *gob.Encoder, req com.Request) {
 	var reply com.Reply
 	reply.Id = req.Id
 	reply.Primes = FindPrimes(req.Interval)
@@ -57,23 +61,20 @@ func AnswerRequest (encoder *gob.Encoder, req com.Request) () {
 func main() {
 
 	fmt.Println("hello!\n")
-	
+
 	listener, err := net.Listen("tcp", "127.0.0.1:30000")
 	checkError(err)
 
 	conn, err := listener.Accept()
 	defer conn.Close()
 	checkError(err)
-	fmt.Println("Starting encoders\n")
 	encoder := gob.NewEncoder(conn)
-    decoder := gob.NewDecoder(conn)
+	decoder := gob.NewDecoder(conn)
 	var req com.Request
 	fmt.Println("Server on\n")
-	for
-	{
+	for {
 		err := decoder.Decode(&req)
 		checkError(err)
 		go AnswerRequest(encoder, req)
 	}
 }
-

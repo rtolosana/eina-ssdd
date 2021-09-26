@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"runtime"
 
 	//"io"
 	"prac1/com"
@@ -51,25 +52,37 @@ func FindPrimes(interval com.TPInterval) (primes []int) {
 	return primes
 }
 
+func worker(channel *chan com.Request, encoder *gob.Encoder) {
+	var reply com.Reply
+	for req := range *channel {
+		reply.Id = req.Id
+		reply.Primes = FindPrimes(req.Interval)
+		encoder.Encode(reply)
+	}
+}
+
 func main() {
 
-	fmt.Println("hello!\n")
+	fmt.Println("Hello!\n")
+	var grcount = runtime.GOMAXPROCS(0)
+	fmt.Printf("Using a fixed pool of %d goroutines", grcount)
 	listener, err := net.Listen("tcp", "127.0.0.1:30000")
 	checkError(err)
-
 	conn, err := listener.Accept()
 	defer conn.Close()
 	checkError(err)
 	encoder := gob.NewEncoder(conn)
 	decoder := gob.NewDecoder(conn)
-	var reply com.Reply
+	var reqchan = make(chan com.Request, 60)
+	for i := 0; i < grcount; i++ {
+		go worker(&reqchan, encoder)
+	}
+
 	var req com.Request
 	fmt.Println("Server on\n")
 	for {
 		err := decoder.Decode(&req)
 		checkError(err)
-		reply.Id = req.Id
-		reply.Primes = FindPrimes(req.Interval)
-		encoder.Encode(reply)
+		reqchan <- req
 	}
 }

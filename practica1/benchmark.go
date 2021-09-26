@@ -10,21 +10,11 @@
 package main
 
 import (
-	"encoding/gob"
-	"fmt"
-	"net"
-	"os"
-
 	//"io"
+	"fmt"
 	"prac1/com"
+	"time"
 )
-
-func checkError(err error) {
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Fatal error: %s", err.Error())
-		os.Exit(1)
-	}
-}
 
 // PRE: verdad
 // POST: IsPrime devuelve verdad si n es primo y falso en caso contrario
@@ -52,24 +42,16 @@ func FindPrimes(interval com.TPInterval) (primes []int) {
 }
 
 func main() {
-
-	fmt.Println("hello!\n")
-	listener, err := net.Listen("tcp", "127.0.0.1:30000")
-	checkError(err)
-
-	conn, err := listener.Accept()
-	defer conn.Close()
-	checkError(err)
-	encoder := gob.NewEncoder(conn)
-	decoder := gob.NewDecoder(conn)
-	var reply com.Reply
-	var req com.Request
-	fmt.Println("Server on\n")
-	for {
-		err := decoder.Decode(&req)
-		checkError(err)
-		reply.Id = req.Id
-		reply.Primes = FindPrimes(req.Interval)
-		encoder.Encode(reply)
+	var times = 50
+	var totaltime time.Duration = 0
+	var start time.Time
+	var interval = com.TPInterval{1000, 70000}
+	for i := 0; i < times; i++ {
+		start = time.Now()
+		FindPrimes(interval)
+		totaltime += time.Now().Sub(start)
+		fmt.Print("*")
 	}
+	fmt.Println()
+	fmt.Println("Executed ", times, "instances in ", totaltime, ", average time ", totaltime.Seconds()/float64(times))
 }

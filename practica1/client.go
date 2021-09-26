@@ -5,16 +5,17 @@
 * FECHA: septiembre de 2021
 * FICHERO: client.go
 * DESCRIPCIÓN: cliente completo para los cuatro escenarios de la práctica 1
-*/
+ */
 package main
 
 import (
-    "fmt"
-    "time"
-    "encoding/gob"
-    "prac1/com"
-    "os"
-    "net"
+	"encoding/gob"
+	"fmt"
+	"net"
+	"os"
+	"prac1/com"
+	"runtime"
+	"time"
 )
 
 func checkError(err error) {
@@ -24,19 +25,19 @@ func checkError(err error) {
 	}
 }
 
-// sendRequest envía una petición (id, interval) al servidor. Una petición es un par id 
+// sendRequest envía una petición (id, interval) al servidor. Una petición es un par id
 // (el identificador único de la petición) e interval, el intervalo en el cual se desea que el servidor encuentre los
 // números primos. La petición se serializa utilizando el encoder y una vez enviada la petición
 // se almacena en una estructura de datos, junto con una estampilla
 // temporal. Para evitar condiciones de carrera, la estructura de datos compartida se almacena en una Goroutine
 // (handleRequests) y que controla los accesos a través de canales síncronos. En este caso, se añade una nueva
 // petición a la estructura de datos mediante el canal addChan
-func sendRequest(id int, interval com.TPInterval, encoder *gob.Encoder, addChan chan com.TimeRequest){
-    request := com.Request{id, interval}
-    timeReq := com.TimeRequest{id, time.Now()}
-    err := encoder.Encode(request)
-    checkError(err)
-    addChan <- timeReq
+func sendRequest(id int, interval com.TPInterval, encoder *gob.Encoder, addChan chan com.TimeRequest) {
+	request := com.Request{id, interval}
+	timeReq := com.TimeRequest{id, time.Now()}
+	err := encoder.Encode(request)
+	checkError(err)
+	addChan <- timeReq
 }
 
 // handleRequests es una Goroutine que garantiza el acceso en exclusión mutua a la tabla de peticiones. La tabla de peticiones
@@ -47,74 +48,76 @@ func sendRequest(id int, interval com.TPInterval, encoder *gob.Encoder, addChan 
 // Antes de eliminar una petición se imprime por la salida estándar el id de una petición y el tiempo transcurrido, observado
 // por el cliente (tiempo de transmisión + tiempo de overheads + tiempo de ejecución efectivo)
 func handleRequests(addChan chan com.TimeRequest, delChan chan com.TimeReply, outFile *os.File) {
-    requests := make(map[int]time.Time)
-    for {
-        select {
-            case request := <- addChan:
-                requests[request.Id] = request.T
-            case reply := <- delChan:
-                var elapsedT = reply.T.Sub(requests[reply.Id])
-                fmt.Println(reply.Id, " ", elapsedT)
-                fmt.Fprintln(outFile, printedRequests, " ", elapsedT)
-                printedRequests++
-                //fmt.Fprintf(outFile, "%d %f\n", reply.Id, elapsedT)
-                delete(requests, reply.Id)
-        }
-    }
+	requests := make(map[int]time.Time)
+	for {
+		select {
+		case request := <-addChan:
+			requests[request.Id] = request.T
+		case reply := <-delChan:
+			var elapsedT = reply.T.Sub(requests[reply.Id])
+			fmt.Println(reply.Id, " ", elapsedT)
+			fmt.Fprintln(outFile, printedRequests, " ", elapsedT)
+			printedRequests++
+			//fmt.Fprintf(outFile, "%d %f\n", reply.Id, elapsedT)
+			delete(requests, reply.Id)
+		}
+	}
 }
 
 // receiveReply recibe las respuestas (id, primos) del servidor. Respuestas que corresponden con peticiones previamente
-// realizadas. 
+// realizadas.
 // el encoder y una vez enviada la petición se almacena en una estructura de datos, junto con una estampilla
 // temporal. Para evitar condiciones de carrera, la estructura de datos compartida se almacena en una Goroutine
 // (handleRequests) y que controla los accesos a través de canales síncronos. En este caso, se añade una nueva
 // petición a la estructura de datos mediante el canal addChan
-func receiveReply(decoder *gob.Decoder, delChan chan com.TimeReply){
-    for {
-        var reply com.Reply
-        err := decoder.Decode(&reply)
-        checkError(err)
-        timeReply := com.TimeReply{reply.Id, time.Now()}
-        delChan <- timeReply
-    }
+func receiveReply(decoder *gob.Decoder, delChan chan com.TimeReply) {
+	for {
+		var reply com.Reply
+		err := decoder.Decode(&reply)
+		checkError(err)
+		timeReply := com.TimeReply{reply.Id, time.Now()}
+		delChan <- timeReply
+	}
 }
 
 var printedRequests = 0
 
-func main(){
-    endpoint := "127.0.0.1:30000"
-    numIt := 10
-    requestTmp := 6
-    interval := com.TPInterval{1000, 70000}
-    tts := 3000 // time to sleep between consecutive requests
-    outFile, err := os.Create("output.txt")
-    defer outFile.Close()
+func main() {
+	endpoint := "127.0.0.1:30000"
+	numIt := 10
+	requestTmp := runtime.GOMAXPROCS(0)
+	//requestTmp = 10
+	interval := com.TPInterval{1000, 70000}
+	tts := 3000 // time to sleep between consecutive requests
+	outFile, err := os.Create("output.txt")
+	defer outFile.Close()
 
-    if err != nil {
+	if err != nil {
 		fmt.Println("os.Create:", err)
 		os.Exit(1)
 	}
 
-    tcpAddr, err := net.ResolveTCPAddr("tcp", endpoint)
-    checkError(err)
+	tcpAddr, err := net.ResolveTCPAddr("tcp", endpoint)
+	checkError(err)
 
-    conn, err := net.DialTCP("tcp", nil, tcpAddr)
-    checkError(err)
+	conn, err := net.DialTCP("tcp", nil, tcpAddr)
+	checkError(err)
 
-    encoder := gob.NewEncoder(conn)
-    decoder := gob.NewDecoder(conn)
-    
-    addChan := make(chan com.TimeRequest)
-    delChan := make(chan com.TimeReply)
+	encoder := gob.NewEncoder(conn)
+	decoder := gob.NewDecoder(conn)
 
-    go receiveReply(decoder, delChan)
-    go handleRequests(addChan, delChan, outFile)
-    
-    for i := 0; i < numIt; i++ {
-        for t := 1; t <= requestTmp; t++{
-            sendRequest(i * requestTmp + t, interval, encoder, addChan)
-            fmt.Println("Sending request", t+i*6)
-        }
-        time.Sleep(time.Duration(tts) * time.Millisecond)
-    }
+	addChan := make(chan com.TimeRequest)
+	delChan := make(chan com.TimeReply)
+
+	go receiveReply(decoder, delChan)
+	go handleRequests(addChan, delChan, outFile)
+
+	for i := 0; i < numIt; i++ {
+		for t := 1; t <= requestTmp; t++ {
+			sendRequest(i*requestTmp+t, interval, encoder, addChan)
+			fmt.Println("Sending request", t+i*6)
+		}
+		time.Sleep(time.Duration(tts) * time.Millisecond)
+	}
+	fmt.Fprintln(outFile, "Received %d answers in 60 seconds.\n Avg: %v seconds needed", printedRequests, 60.0/printedRequests)
 }
