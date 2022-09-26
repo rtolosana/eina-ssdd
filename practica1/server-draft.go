@@ -15,7 +15,7 @@ import (
 	"net"
 	"os"
 	"io"
-	"./com"
+	"practica1/com"
 )
 
 func checkError(err error) {
