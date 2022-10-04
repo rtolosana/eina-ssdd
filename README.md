@@ -4,3 +4,8 @@ En términos generales, puede decirse que el problema fundamental de los sistema
 - *client.go*: el cliente completo para los cuatro escenarios de la práctica
 - *server.go*: el servidor que hay que completar y que será la base para el diseño y la implementación de los cuatro escenarios
 - *plot.sh*: script para gnuplot que toma como entrada un fichero output.txt (fichero que recoge la salida del client.go) y muestra gráficamente si se ha violado el QoS.
+
+## Práctica 2
+Relojes, tiempo y estado en un sistema distribuido. En esta práctica se va a diseñar e implementar en Go una aplicación de lectores / escritores distribuidos. Deberéis utilizar:
+- el modelo actor para la comunicación entre procesos (se proporciona un código auxiliar)
+- el Algoritmo de Ricart-Agrawala generalizado
