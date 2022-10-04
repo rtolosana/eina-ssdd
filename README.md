@@ -7,5 +7,5 @@ En términos generales, puede decirse que el problema fundamental de los sistema
 
 ## Práctica 2
 Relojes, tiempo y estado en un sistema distribuido. En esta práctica se va a diseñar e implementar en Go una aplicación de lectores / escritores distribuidos. Deberéis utilizar:
-- el modelo actor para la comunicación entre procesos (se proporciona un código auxiliar)
-- el Algoritmo de Ricart-Agrawala generalizado
+- el modelo actor para la comunicación entre procesos (se proporciona un código auxiliar, ms.go)
+- el Algoritmo de Ricart-Agrawala generalizado (se proporciona ra.go, ra.go tiene 2 funciones preprocolo y postprotocolo que pueden utilizarse para construir aplicaciones, por ejemplo, la aplicaciónd de lectores escritores distribuida).
